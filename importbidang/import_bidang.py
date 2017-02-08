@@ -61,7 +61,8 @@ class ImportBidang:
 
         # Create the dialog (after translation) and keep reference
         self.dlg = ImportBidangDialog()
-
+        # connect slot
+        self.dlg.cboLayer.currentIndexChanged.connect(self.index_changed)
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&Import Bidang')
@@ -179,18 +180,18 @@ class ImportBidang:
         # remove the toolbar
         del self.toolbar
 
-    def get_layer_list(self):
-        """Function to get layer list from mapcanvas.
+    def daftar_layer(self):
+        """Function to get layer list from table of content
 
-        :return: list of QgsMapLayer
+        :return: list of layer
         """
-        layer_list = []
+        daftar_layer = []
         for layer in self.iface.mapCanvas().layers():
-            layer_list.append(layer)
-        return layer_list
+            daftar_layer.append(layer)
+        return daftar_layer
 
-    def get_field_list(self, layer):
-        """Function to get list of layer fields.
+    def daftar_kolom(self, layer):
+        """Function to get fields list of a layer
 
         :param layer:
         :return:
@@ -200,28 +201,22 @@ class ImportBidang:
             layer_fields = layer.pendingFields()
             for field in layer_fields:
                 self.dlg.cboField.addItem(field.name(), field)
-        else:
-            self.dlg.log_edit.append("Selected layer is not a Vector Layer")
 
 
     def index_changed(self):
-        """Connect the changing of layer_combo to get_field list function"""
-        self.dlg.log_edit.clear()
+        """Mengakomodir perubahan layer terpilih terhadap daftar field yang akan ditampilkan"""
         current_index = self.dlg.cboLayer.currentIndex()
         layer = self.dlg.cboLayer.itemData(current_index)
-        self.dlg.log_edit.append(layer.name())
-        self.get_field_list(layer)
+        self.daftar_kolom(layer)
 
     def run(self):
         """Run method that performs all the real work"""
         # show the dialog
         self.dlg.show()
-        # Get the layer list from map canvas
-        layer_list = self.get_layer_list()
-        # add layer to combo box layer
-        for layer in layer_list:
-            self.dlg.cboLayer.addItem(layer.name(), layer)
         # Run the dialog event loop
+        daftar_layer = self.daftar_layer()
+        for layer in daftar_layer:
+            self.dlg.cboLayer.addItem(layer.name(), layer)
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
