@@ -28,6 +28,7 @@ import resources
 from import_bidang_dialog import ImportBidangDialog
 from qgis.core import QgsMapLayer
 import os.path
+import psycopg2 #to connect postgres db
 
 
 class ImportBidang:
@@ -214,6 +215,7 @@ class ImportBidang:
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
+        self.dlg.cboLayer.clear()
         daftar_layer = self.daftar_layer()
         for layer in daftar_layer:
             self.dlg.cboLayer.addItem(layer.name(), layer)
@@ -222,4 +224,44 @@ class ImportBidang:
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            pass
+            selectedLayerIndex = self.dlg.cboLayer.currentIndex()
+            selectedLayer = self.iface.mapCanvas().layers()[selectedLayerIndex]
+            #selectedLayer.setCrs(QgsCoordinateReferenceSystem(32750))
+            #fields = selectedLayer.pendingFields()
+            fieldname = str(self.dlg.cboField.currentText())
+
+            for feature in selectedLayer.getFeatures():
+                idx = selectedLayer.fieldNameIndex(fieldname)
+                nop = feature.attributes()[idx]
+                geom = feature.geometry()
+                geom_wkt = geom.exportToWkt()
+                #multipolygon = "MULTIPOLYGON((("
+                geom_wkt_str = geom_wkt[10:-2]
+                #st_geom = """ST_GeomFromText('"""
+                #srid = """)', 32750)"""
+                #geom_wkb_postgis = st_geom + multipolygon +geom_wkt_str + srid
+                #wkb version, just return geometry, doesn't include SRID
+                #geom_wkb = geom.asWkb()
+                #geom_wkb_postgis = geom_wkb.encode('hex')
+                query1 = '''INSERT INTO gis.tm_bidang3(d_nop,geom) VALUES (%s, ST_GeomFromText(%s, 32750));'''
+                #query = """INSERT INTO gis.tm_bidang2(d_nop,geom) VALUES (%s, ST_GeomFromText('MULTIPOLYGON(((%s)))', 32750));"""
+                data = [nop, geom_wkt]
+
+                #Parameter Connection to database
+                host_name = "localhost"
+                port_name = "5433"
+                db_name = "db_pbb"
+                user_name = "postgres"
+                user_pass = "septin"
+
+                #Connection
+                conn = psycopg2.connect("user='%s' password='%s' host='%s' port='%s' dbname='%s'" %
+                                        (user_name, user_pass, host_name, port_name, db_name))
+                cur = conn.cursor()
+                cur.execute(query1, data)
+                conn.commit()
+                cur.close()
+                conn.close()
+
+
+
